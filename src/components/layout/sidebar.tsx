@@ -43,7 +43,7 @@ export function Sidebar() {
         </nav>
         <div className="p-4 border-t">
           <p className="text-xs text-muted-foreground">
-            Accountability + Wellbeing
+            Billing Accountability + Wellbeing
           </p>
         </div>
       </div>

@@ -3,21 +3,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase/client';
 import { StatusBanner } from '@/components/dashboard/status-banner';
+import { BillingProgress } from '@/components/dashboard/billing-progress';
 import { DualGauge } from '@/components/dashboard/dual-gauge';
 import { TrendChart } from '@/components/dashboard/trend-chart';
 import { ActiveAlerts } from '@/components/dashboard/active-alerts';
 import { StreakDisplay } from '@/components/dashboard/streak-display';
 import { calculateBurnoutScore, calcDaysSinceBreak } from '@/lib/burnout-engine';
 import { calculatePerformanceScore, calculateWellbeingScore, detectDancingInShackles } from '@/lib/scoring';
+import { BILLING } from '@/lib/constants';
 import type { Task, DailyLog, WellbeingAlert, StatusColor } from '@/types/database';
 
 export default function DashboardPage() {
   const [status, setStatus] = useState<StatusColor>('green');
   const [perfScore, setPerfScore] = useState(0);
   const [wellScore, setWellScore] = useState(0);
+  const [hoursToday, setHoursToday] = useState(0);
   const [alerts, setAlerts] = useState<WellbeingAlert[]>([]);
   const [trendData, setTrendData] = useState<{ date: string; performance: number; wellbeing: number }[]>([]);
-  const [streakDays, setStreakDays] = useState<{ date: string; completed: boolean }[]>([]);
+  const [streakDays, setStreakDays] = useState<{ date: string; hours: number }[]>([]);
   const [currentStreak, setCurrentStreak] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -36,21 +39,25 @@ export default function DashboardPage() {
 
       setAlerts(allAlerts);
 
+      // Calculate today's hours
+      const todayStr = new Date().toISOString().split('T')[0];
+      const todayHours = logs.length > 0 && logs[0].log_date === todayStr
+        ? logs[0].hours_worked
+        : 0;
+      setHoursToday(todayHours);
+
       // Calculate burnout score
       const activeTasks = tasks.filter((t) => t.status === 'active');
       const last3Logs = logs.slice(0, 3);
-      const hoursToday = logs.length > 0 && logs[0].log_date === new Date().toISOString().split('T')[0]
-        ? logs[0].hours_worked
-        : 0;
       const daysSinceBreak = calcDaysSinceBreak(logs);
 
-      const burnout = calculateBurnoutScore(activeTasks, last3Logs, hoursToday, daysSinceBreak);
+      const burnout = calculateBurnoutScore(activeTasks, last3Logs, todayHours, daysSinceBreak);
       setStatus(burnout.status);
 
-      // Calculate scores
+      // Calculate scores (with billing hours)
       const completedTasks = tasks.filter((t) => t.status === 'completed');
       const allNonAbandoned = tasks.filter((t) => t.status !== 'abandoned');
-      const perf = calculatePerformanceScore(completedTasks, allNonAbandoned);
+      const perf = calculatePerformanceScore(completedTasks, allNonAbandoned, todayHours);
       const unackedAlerts = allAlerts.filter((a) => !a.acknowledged);
       const well = calculateWellbeingScore(last3Logs, unackedAlerts);
 
@@ -81,7 +88,8 @@ export default function DashboardPage() {
             completedTasks.filter(
               (t) => t.updated_at && t.updated_at.split('T')[0] <= log.log_date
             ),
-            allNonAbandoned
+            allNonAbandoned,
+            log.hours_worked
           );
           const dayWell = calculateWellbeingScore([log], []);
           return {
@@ -92,9 +100,9 @@ export default function DashboardPage() {
         });
       setTrendData(trend);
 
-      // Build streak heatmap (last 14 days)
+      // Build billing streak heatmap (last 14 days)
       const today = new Date();
-      const heatmap: { date: string; completed: boolean }[] = [];
+      const heatmap: { date: string; hours: number }[] = [];
       let streak = 0;
       let streakBroken = false;
 
@@ -103,11 +111,11 @@ export default function DashboardPage() {
         d.setDate(d.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
         const log = logs.find((l) => l.log_date === dateStr);
-        const hasActivity = log ? log.tasks_completed > 0 : false;
-        heatmap.push({ date: dateStr, completed: hasActivity });
+        const dayHours = log ? log.hours_worked : 0;
+        heatmap.push({ date: dateStr, hours: dayHours });
 
         if (!streakBroken) {
-          if (hasActivity) streak++;
+          if (dayHours >= BILLING.TARGET_HOURS) streak++;
           else streakBroken = true;
         }
       }
@@ -144,6 +152,8 @@ export default function DashboardPage() {
       <h2 className="text-2xl font-bold">Dashboard</h2>
 
       <StatusBanner status={status} />
+
+      <BillingProgress hoursToday={hoursToday} />
 
       <DualGauge performanceScore={perfScore} wellbeingScore={wellScore} />
 

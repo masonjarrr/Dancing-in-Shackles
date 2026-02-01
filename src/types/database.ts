@@ -3,12 +3,23 @@ export type TaskStatus = 'active' | 'completed' | 'forgiven' | 'abandoned';
 export type AlertType = 'overload' | 'exhaustion' | 'streak_pressure' | 'low_mood' | 'dancing_in_shackles';
 export type AlertSeverity = 'yellow' | 'red';
 export type StatusColor = 'green' | 'yellow' | 'red';
+export type TaskCategory =
+  | 'case_review'
+  | 'drafting'
+  | 'depositions'
+  | 'discovery'
+  | 'research'
+  | 'client_communication'
+  | 'court_appearances'
+  | 'administrative'
+  | 'other';
 
 export interface Task {
   id: string;
   title: string;
   commitment_level: CommitmentLevel;
   status: TaskStatus;
+  category: TaskCategory;
   due_date: string | null;
   streak_count: number;
   recurring: boolean;
@@ -68,6 +79,9 @@ export interface PerformanceScore {
   tasksCompleted: number;
   pointsEarned: number;
   pointsPossible: number;
+  billingHours: number;
+  billingTarget: number;
+  billingMet: boolean;
 }
 
 export interface WellbeingScore {

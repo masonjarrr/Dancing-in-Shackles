@@ -4,6 +4,7 @@ import { Check, Heart, X, Flame } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { LEGAL_CATEGORIES } from '@/lib/constants';
 import type { Task } from '@/types/database';
 
 interface TaskCardProps {
@@ -21,6 +22,7 @@ const commitmentColors = {
 
 export function TaskCard({ task, onComplete, onForgive, onAbandon }: TaskCardProps) {
   const isActive = task.status === 'active';
+  const categoryInfo = LEGAL_CATEGORIES[task.category] || LEGAL_CATEGORIES.other;
 
   return (
     <div
@@ -30,12 +32,15 @@ export function TaskCard({ task, onComplete, onForgive, onAbandon }: TaskCardPro
       )}
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <p className={cn('text-sm font-medium truncate', !isActive && 'line-through')}>
             {task.title}
           </p>
           <Badge variant="outline" className={cn('text-xs shrink-0', commitmentColors[task.commitment_level])}>
             {task.commitment_level}
+          </Badge>
+          <Badge variant="outline" className={cn('text-xs shrink-0', categoryInfo.color)}>
+            {categoryInfo.label}
           </Badge>
         </div>
         <div className="flex items-center gap-3 mt-1">

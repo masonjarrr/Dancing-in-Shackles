@@ -6,7 +6,7 @@ import { TaskForm } from '@/components/tasks/task-form';
 import { TaskList } from '@/components/tasks/task-list';
 import { WorkloadMeter } from '@/components/tasks/workload-meter';
 import { ForgiveDialog } from '@/components/tasks/forgive-dialog';
-import type { Task, CommitmentLevel } from '@/types/database';
+import type { Task, CommitmentLevel, TaskCategory } from '@/types/database';
 
 export default function TasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -31,6 +31,7 @@ export default function TasksPage() {
   async function handleAddTask(task: {
     title: string;
     commitment_level: CommitmentLevel;
+    category: TaskCategory;
     due_date: string | null;
     recurring: boolean;
   }) {

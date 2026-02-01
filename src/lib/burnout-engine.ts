@@ -1,4 +1,4 @@
-import { BURNOUT } from './constants';
+import { BURNOUT, BILLING } from './constants';
 import type { BurnoutScore, DailyLog, StatusColor, Task } from '@/types/database';
 
 function clamp(value: number, min: number, max: number): number {
@@ -27,10 +27,14 @@ function calcMoodFactor(recentLogs: DailyLog[]): number {
 
 /**
  * Calculate hours worked factor (0-100).
+ * 8 hours (billing target) = 0 burnout risk — that's the goal.
+ * Only ramp up from hours above 8, hitting 100% at BURNOUT_HOURS_THRESHOLD (11).
  */
 function calcHoursFactor(hoursToday: number): number {
-  const ratio = hoursToday / BURNOUT.MAX_HEALTHY_HOURS;
-  return clamp(ratio * 100, 0, 100);
+  if (hoursToday <= BILLING.TARGET_HOURS) return 0;
+  const overHours = hoursToday - BILLING.TARGET_HOURS;
+  const maxOver = BURNOUT.MAX_HEALTHY_HOURS - BILLING.TARGET_HOURS; // 11 - 8 = 3
+  return clamp((overHours / maxOver) * 100, 0, 100);
 }
 
 /**
@@ -51,23 +55,23 @@ function getRecommendations(score: number, factors: BurnoutScore['factors']): st
   const recs: string[] = [];
 
   if (factors.taskLoad > 70) {
-    recs.push('Consider forgiving or postponing low-priority tasks to reduce your load.');
+    recs.push('Heavy caseload detected. Consider deprioritizing low-value matters or delegating to paralegals.');
   }
   if (factors.moodAvg > 60) {
-    recs.push('Your mood has been low recently. Take a break or do something you enjoy.');
+    recs.push('Your mood has been trending low. Step away from the desk — even 15 minutes helps reset.');
   }
   if (factors.hoursWorked > 70) {
-    recs.push("You've been working long hours. Step away and rest.");
+    recs.push('Extended hours increase error risk. Wrap up and protect your capacity for tomorrow.');
   }
   if (factors.daysSinceBreak > 70) {
-    recs.push("It's been a while since your last break day. Consider taking one tomorrow.");
+    recs.push('No days off in a while. Schedule a recovery day to avoid diminishing returns.');
   }
   if (score >= 70) {
-    recs.push('RECOVERY MODE: Consider forgiving low-commitment tasks and extending deadlines.');
-    recs.push('Pause any active streaks to focus on wellbeing.');
+    recs.push('RECOVERY MODE: Sustained overwork creates malpractice exposure. Triage your docket aggressively.');
+    recs.push('Consider blocking a half-day for recovery before taking on new matters.');
   }
   if (recs.length === 0) {
-    recs.push("You're doing well! Maintain your current balance.");
+    recs.push("You're in a sustainable rhythm. Keep billing at this pace.");
   }
 
   return recs;

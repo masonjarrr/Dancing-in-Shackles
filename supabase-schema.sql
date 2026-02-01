@@ -72,3 +72,8 @@ create policy "Allow all on tasks" on tasks for all using (true) with check (tru
 create policy "Allow all on daily_logs" on daily_logs for all using (true) with check (true);
 create policy "Allow all on accountability_reviews" on accountability_reviews for all using (true) with check (true);
 create policy "Allow all on wellbeing_alerts" on wellbeing_alerts for all using (true) with check (true);
+
+-- Migration: Add category column for legal task categories
+ALTER TABLE tasks ADD COLUMN category text DEFAULT 'other'
+  CHECK (category IN ('case_review','drafting','depositions','discovery',
+    'research','client_communication','court_appearances','administrative','other'));

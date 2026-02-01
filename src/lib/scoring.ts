@@ -1,4 +1,4 @@
-import { TASK_POINTS, SHACKLES, WELLBEING_ALERT_PENALTY } from './constants';
+import { TASK_POINTS, SHACKLES, WELLBEING_ALERT_PENALTY, BILLING } from './constants';
 import type {
   Task,
   DailyLog,
@@ -8,12 +8,14 @@ import type {
 } from '@/types/database';
 
 /**
- * Calculate performance score (0-100) based on completed tasks.
- * High = 5pts, Medium = 3pts, Low = 1pt.
+ * Calculate performance score (0-100).
+ * 60% task completion (weighted by commitment level) + 40% billing hours.
  */
 export function calculatePerformanceScore(
   completedTasks: Task[],
-  allTasks: Task[]
+  allTasks: Task[],
+  hoursToday: number = 0,
+  billingTarget: number = BILLING.TARGET_HOURS
 ): PerformanceScore {
   const pointsEarned = completedTasks.reduce(
     (sum, t) => sum + (TASK_POINTS[t.commitment_level] || 1),
@@ -25,13 +27,24 @@ export function calculatePerformanceScore(
     0
   );
 
-  const score = pointsPossible > 0 ? Math.round((pointsEarned / pointsPossible) * 100) : 0;
+  const taskScore = pointsPossible > 0 ? (pointsEarned / pointsPossible) * 100 : 0;
+
+  // Billing component: percentage of target met, capped at 100%
+  const billingScore = billingTarget > 0
+    ? Math.min((hoursToday / billingTarget) * 100, 100)
+    : 0;
+
+  // 60% tasks + 40% billing
+  const score = Math.round(taskScore * 0.6 + billingScore * 0.4);
 
   return {
     score: Math.min(score, 100),
     tasksCompleted: completedTasks.length,
     pointsEarned,
     pointsPossible,
+    billingHours: hoursToday,
+    billingTarget,
+    billingMet: hoursToday >= billingTarget,
   };
 }
 

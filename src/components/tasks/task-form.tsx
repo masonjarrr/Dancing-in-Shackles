@@ -12,14 +12,15 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { WORKLOAD } from '@/lib/constants';
-import type { CommitmentLevel } from '@/types/database';
+import { WORKLOAD, LEGAL_CATEGORIES } from '@/lib/constants';
+import type { CommitmentLevel, TaskCategory } from '@/types/database';
 
 interface TaskFormProps {
   activeCount: number;
   onSubmit: (task: {
     title: string;
     commitment_level: CommitmentLevel;
+    category: TaskCategory;
     due_date: string | null;
     recurring: boolean;
   }) => void;
@@ -28,6 +29,7 @@ interface TaskFormProps {
 export function TaskForm({ activeCount, onSubmit }: TaskFormProps) {
   const [title, setTitle] = useState('');
   const [commitment, setCommitment] = useState<CommitmentLevel>('medium');
+  const [category, setCategory] = useState<TaskCategory>('other');
   const [dueDate, setDueDate] = useState('');
   const [recurring, setRecurring] = useState(false);
   const [warning, setWarning] = useState('');
@@ -50,12 +52,14 @@ export function TaskForm({ activeCount, onSubmit }: TaskFormProps) {
     onSubmit({
       title: title.trim(),
       commitment_level: commitment,
+      category,
       due_date: dueDate || null,
       recurring,
     });
     setTitle('');
     setDueDate('');
     setCommitment('medium');
+    setCategory('other');
     setRecurring(false);
     setWarning('');
   }
@@ -94,6 +98,24 @@ export function TaskForm({ activeCount, onSubmit }: TaskFormProps) {
             </div>
 
             <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as TaskCategory)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(LEGAL_CATEGORIES).map(([key, { label }]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label htmlFor="due_date">Due Date</Label>
               <Input
                 id="due_date"
@@ -102,19 +124,19 @@ export function TaskForm({ activeCount, onSubmit }: TaskFormProps) {
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
-          </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="recurring"
-              checked={recurring}
-              onChange={(e) => setRecurring(e.target.checked)}
-              className="rounded"
-            />
-            <Label htmlFor="recurring" className="text-sm font-normal">
-              Recurring task
-            </Label>
+            <div className="flex items-center gap-2 pt-7">
+              <input
+                type="checkbox"
+                id="recurring"
+                checked={recurring}
+                onChange={(e) => setRecurring(e.target.checked)}
+                className="rounded"
+              />
+              <Label htmlFor="recurring" className="text-sm font-normal">
+                Recurring task
+              </Label>
+            </div>
           </div>
 
           {warning && (
