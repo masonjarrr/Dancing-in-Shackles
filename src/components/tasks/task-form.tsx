@@ -23,7 +23,7 @@ interface TaskFormProps {
     category: TaskCategory;
     due_date: string | null;
     recurring: boolean;
-  }) => void;
+  }) => Promise<void>;
 }
 
 export function TaskForm({ activeCount, onSubmit }: TaskFormProps) {
@@ -33,6 +33,8 @@ export function TaskForm({ activeCount, onSubmit }: TaskFormProps) {
   const [dueDate, setDueDate] = useState('');
   const [recurring, setRecurring] = useState(false);
   const [warning, setWarning] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -48,20 +50,28 @@ export function TaskForm({ activeCount, onSubmit }: TaskFormProps) {
     submitTask();
   }
 
-  function submitTask() {
-    onSubmit({
-      title: title.trim(),
-      commitment_level: commitment,
-      category,
-      due_date: dueDate || null,
-      recurring,
-    });
-    setTitle('');
-    setDueDate('');
-    setCommitment('medium');
-    setCategory('other');
-    setRecurring(false);
-    setWarning('');
+  async function submitTask() {
+    setError('');
+    setSubmitting(true);
+    try {
+      await onSubmit({
+        title: title.trim(),
+        commitment_level: commitment,
+        category,
+        due_date: dueDate || null,
+        recurring,
+      });
+      setTitle('');
+      setDueDate('');
+      setCommitment('medium');
+      setCategory('other');
+      setRecurring(false);
+      setWarning('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to add task. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -146,16 +156,22 @@ export function TaskForm({ activeCount, onSubmit }: TaskFormProps) {
                 <Button type="button" size="sm" variant="outline" onClick={() => setWarning('')}>
                   Cancel
                 </Button>
-                <Button type="button" size="sm" onClick={submitTask}>
-                  Add Anyway
+                <Button type="button" size="sm" onClick={submitTask} disabled={submitting}>
+                  {submitting ? 'Adding...' : 'Add Anyway'}
                 </Button>
               </div>
             </div>
           )}
 
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30">
+              <p className="text-sm text-red-400">{error}</p>
+            </div>
+          )}
+
           {!warning && (
-            <Button type="submit" className="w-full">
-              Add Task
+            <Button type="submit" className="w-full" disabled={submitting}>
+              {submitting ? 'Adding...' : 'Add Task'}
             </Button>
           )}
         </form>

@@ -35,10 +35,11 @@ export default function TasksPage() {
     due_date: string | null;
     recurring: boolean;
   }) {
-    const { data } = await supabase.from('tasks').insert(task).select().single();
-    if (data) {
-      setTasks((prev) => [data, ...prev]);
+    const { data, error } = await supabase.from('tasks').insert(task).select().single();
+    if (error) {
+      throw new Error(error.message);
     }
+    setTasks((prev) => [data, ...prev]);
   }
 
   async function handleComplete(id: string) {
